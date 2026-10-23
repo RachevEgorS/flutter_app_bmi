@@ -1,17 +1,47 @@
-# flutter_application_1
+# Калькулятор индекса массы тела
 
-A new Flutter project.
+Учебное Flutter-приложение с экранами по предоставленным макетам.
 
-## Getting Started
+## Запуск
 
-This project is a starting point for a Flutter application.
+Откройте папку проекта в VS Code, выберите Android-эмулятор и нажмите F5.
+После изменения структуры приложения остановите предыдущий запуск и запустите заново.
 
-A few resources to get you started if this is your first Flutter project:
+## Файлы
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- `lib/main.dart` — тема приложения и запуск `AuthScreen`.
+- `lib/auth_screen.dart` — вход, проверка данных, переход к регистрации и калькулятору.
+- `lib/registration_screen.dart` — отдельный экран регистрации с проверкой полей.
+- `lib/bmi_screen.dart` — ввод роста в сантиметрах и веса в килограммах, расчёт результата.
+- `lib/profile_screen.dart` — профиль и история выполненных расчётов.
+- `lib/app_ui.dart` — общие цвета, карточки, поля, кнопки и нижняя панель.
+- `lib/app_session.dart` — учебные аккаунты, данные пользователя и модель расчёта.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Учебный вход
+
+Email: `i_g_o_r_spirin@mail.ru`
+Пароль: `456321`
+
+Оба поля заранее заполнены. Неверные данные показывают сообщение под кнопкой.
+Регистрация создаёт дополнительный учебный аккаунт в памяти и возвращает на экран входа.
+Данные аккаунтов и история расчётов сохраняются только до перезапуска приложения.
+Сервер, база данных и постоянное хранение паролей не подключены.
+В профиле установлен нейтральный аватар. При первом входе история пустая.
+
+## Расчёт
+
+ИМТ = вес (кг) / рост (м)². Поддерживается десятичная точка и запятая.
+Нулевые, отрицательные, пустые и нечисловые значения отклоняются.
+История содержит только реально выполненные расчёты, новые идут первыми.
+Категории ИМТ предназначены для взрослых от 20 лет и не являются диагнозом.
+Источник категорий: https://www.cdc.gov/bmi/adult-calculator/bmi-categories.html
+
+## Проверка
+
+`flutter analyze`
+
+`flutter test`
+
+`flutter build apk --debug --target-platform android-x64`
+
+Последняя команда собирает APK для эмулятора x64; для телефона используйте `flutter build apk --debug`.

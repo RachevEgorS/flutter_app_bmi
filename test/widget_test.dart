@@ -1,69 +1,168 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/app_session.dart';
+import 'package:flutter_application_1/auth_screen.dart';
+import 'package:flutter_application_1/bmi_screen.dart';
+import 'package:flutter_application_1/profile_screen.dart';
+import 'package:flutter_application_1/registration_screen.dart';
+
+Future<void> tapText(WidgetTester tester, String text) async {
+  final finder = find.text(text);
+  await tester.ensureVisible(finder);
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
 
 void main() {
-  testWidgets('Empty registration shows errors; valid form shows demo result', (
-    tester,
-  ) async {
+  testWidgets(
+    'Login rejects wrong credentials and accepts the specified account',
+    (tester) async {
+      await tester.pumpWidget(const MyApp());
+      expect(find.byType(AuthScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        demoEmail,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).last)
+            .controller!
+            .text,
+        demoPassword,
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byType(TextField).last)
+            .obscureText,
+        isTrue,
+      );
+      expect(find.text('Неверный email или пароль'), findsNothing);
+      await tester.enterText(find.byType(TextFormField).last, 'wrong');
+      await tapText(tester, 'ВОЙТИ');
+      expect(find.text('Неверный email или пароль'), findsOneWidget);
+      expect(find.byType(BmiScreen), findsNothing);
+      await tester.enterText(find.byType(TextFormField).last, demoPassword);
+      await tapText(tester, 'ВОЙТИ');
+      expect(find.byType(BmiScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Registration validates, rejects duplicate email, and creates a session account',
+    (tester) async {
+      await tester.pumpWidget(const MyApp());
+      await tapText(tester, 'Зарегистрироваться');
+      expect(find.byType(RegistrationScreen), findsOneWidget);
+      await tapText(tester, 'СОЗДАТЬ АККАУНТ');
+      expect(find.text('Заполните это поле'), findsNWidgets(2));
+      expect(find.text('Введите корректный email'), findsOneWidget);
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), 'Анна');
+      await tester.enterText(fields.at(1), 'Иванова');
+      await tester.enterText(fields.at(2), demoEmail);
+      await tester.enterText(fields.at(3), 'secret123');
+      await tapText(tester, 'СОЗДАТЬ АККАУНТ');
+      expect(find.text('Этот email уже зарегистрирован'), findsOneWidget);
+      await tester.enterText(fields.at(2), 'anna@example.com');
+      await tapText(tester, 'СОЗДАТЬ АККАУНТ');
+      expect(find.byType(AuthScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        'anna@example.com',
+      );
+      await tester.enterText(find.byType(TextFormField).last, 'secret123');
+      await tapText(tester, 'ВОЙТИ');
+      await tapText(tester, 'Профиль');
+      expect(find.text('Анна Иванова'), findsOneWidget);
+      expect(find.text('anna@example.com'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Registration back link returns to login', (tester) async {
     await tester.pumpWidget(const MyApp());
-    await tester.ensureVisible(find.text('СОЗДАТЬ АККАУНТ'));
-    await tester.tap(find.text('СОЗДАТЬ АККАУНТ'));
-    await tester.pumpAndSettle();
-    expect(find.text('Заполните это поле'), findsNWidgets(2));
-    expect(find.text('Введите корректный email'), findsOneWidget);
-    expect(find.text('Введите пароль'), findsWidgets);
-    final fields = find.byType(TextFormField);
-    await tester.enterText(fields.at(0), 'Анна');
-    await tester.enterText(fields.at(1), 'Иванова');
-    await tester.enterText(fields.at(2), 'anna@example.com');
-    await tester.enterText(fields.at(3), 'example123');
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('СОЗДАТЬ АККАУНТ'));
-    await tester.tap(find.text('СОЗДАТЬ АККАУНТ'));
-    await tester.pumpAndSettle();
-    expect(find.text('Данные проверены'), findsOneWidget);
+    await tapText(tester, 'Зарегистрироваться');
+    await tapText(tester, 'Вернуться к странице входа');
+    expect(find.byType(AuthScreen), findsOneWidget);
   });
 
-  testWidgets('Login link opens login form and clears password', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MyApp());
-    await tester.enterText(find.byType(TextFormField).last, 'example123');
-    await tester.ensureVisible(find.text('Вернуться к странице входа'));
-    await tester.tap(find.text('Вернуться к странице входа'));
-    await tester.pumpAndSettle();
-    expect(find.text('Вход'), findsOneWidget);
-    expect(find.byType(TextFormField), findsNWidgets(2));
+  testWidgets(
+    'Calculator validates inputs and profile preserves real history',
+    (tester) async {
+      await tester.pumpWidget(const MyApp());
+      await tapText(tester, 'ВОЙТИ');
+      await tapText(tester, 'Профиль');
+      expect(find.textContaining('Расчётов пока нет'), findsOneWidget);
+      await tapText(tester, 'Калькулятор');
+      await tester.enterText(find.byType(TextFormField).first, '');
+      await tapText(tester, 'РАССЧИТАТЬ');
+      expect(find.text('Заполните все поля!'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField).first, '0');
+      await tapText(tester, 'РАССЧИТАТЬ');
+      expect(
+        find.text('Введите рост и вес числами больше нуля'),
+        findsOneWidget,
+      );
+      await tester.enterText(find.byType(TextFormField).first, '185');
+      await tester.enterText(find.byType(TextFormField).last, '77,0');
+      await tapText(tester, 'РАССЧИТАТЬ');
+      expect(find.text('Ваш ИМТ: 22.5'), findsOneWidget);
+      await tapText(tester, 'Профиль');
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('22.5'), findsOneWidget);
+      expect(find.text('185 см'), findsOneWidget);
+      expect(find.textContaining('Сегодня,'), findsOneWidget);
+      await tapText(tester, 'Калькулятор');
+      expect(find.text('Ваш ИМТ: 22.5'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField).last, '80');
+      await tester.pump();
+      expect(find.text('Ваш ИМТ: 22.5'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Small display with keyboard and enlarged text supports all screens',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(const MyApp());
+      await tapText(tester, 'Зарегистрироваться');
+      await tapText(tester, 'СОЗДАТЬ АККАУНТ');
+      expect(tester.takeException(), isNull);
+      await tapText(tester, 'Вернуться к странице входа');
+      await tapText(tester, 'ВОЙТИ');
+      await tapText(tester, 'РАССЧИТАТЬ');
+      expect(tester.takeException(), isNull);
+      await tapText(tester, 'Профиль');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  test('BMI formula, category boundaries, and number parsing', () {
+    BmiRecord record(double weight) =>
+        BmiRecord(height: 100, weight: weight, date: DateTime(2026));
     expect(
-      tester
-          .widget<TextFormField>(find.byType(TextFormField).last)
-          .controller!
-          .text,
-      isEmpty,
+      BmiRecord(height: 185, weight: 77, date: DateTime(2026)).bmi,
+      closeTo(22.498, 0.001),
     );
-    await tester.tap(find.text('Перейти к регистрации'));
-    await tester.pumpAndSettle();
-    expect(find.byType(TextFormField), findsNWidgets(4));
-  });
-
-  testWidgets('Small screen with keyboard and large text remains scrollable', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
-        child: const MyApp(),
-      ),
-    );
-    await tester.ensureVisible(find.text('СОЗДАТЬ АККАУНТ'));
-    await tester.tap(find.text('СОЗДАТЬ АККАУНТ'));
-    await tester.pumpAndSettle();
-    expect(find.text('Введите корректный email'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(record(18.49).category, 'Недостаточная масса тела');
+    expect(record(18.5).category, 'Нормальная масса тела');
+    expect(record(24.99).category, 'Нормальная масса тела');
+    expect(record(25).category, 'Избыточная масса тела');
+    expect(record(30).category, 'Ожирение');
+    expect(parsePositiveNumber('77,5'), 77.5);
+    for (final invalid in ['', '0', '-1', 'NaN', 'Infinity', 'abc']) {
+      expect(parsePositiveNumber(invalid), isNull);
+    }
   });
 }
