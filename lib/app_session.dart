@@ -15,7 +15,7 @@ class UserProfile {
 class AppSession {
   final Map<String, ({UserProfile profile, String password})> _accounts = {
     demoEmail: (
-      profile: UserProfile(name: 'Пользователь', surname: '', email: demoEmail),
+      profile: UserProfile(name: 'Имя', surname: 'Фамилия', email: demoEmail),
       password: demoPassword,
     ),
   };
@@ -56,12 +56,41 @@ class BmiRecord {
   final DateTime date;
   double get bmi => weight / ((height / 100) * (height / 100));
 
-  // Категории для взрослых 20+: https://www.cdc.gov/bmi/adult-calculator/bmi-categories.html
+  String get formattedBmi =>
+      bmi.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+
+  // Интервалы задания без пересечений: <=16; (16,18.5); [18.5,25);
+  // [25,30); [30,35); [35,40); >=40. Сравниваем неокруглённый ИМТ.
   String get category {
+    if (bmi <= 16) return 'Выраженный дефицит массы тела';
     if (bmi < 18.5) return 'Недостаточная масса тела';
-    if (bmi < 25) return 'Нормальная масса тела';
-    if (bmi < 30) return 'Избыточная масса тела';
-    return 'Ожирение';
+    if (bmi < 25) return 'Норма';
+    if (bmi < 30) return 'Избыточная масса тела или предожирение';
+    if (bmi < 35) return 'Ожирение';
+    if (bmi < 40) return 'Ожирение резкое';
+    return 'Очень резкое ожирение';
+  }
+
+  String get recommendation {
+    if (bmi <= 16) {
+      return 'Выраженный дефицит массы тела. Советуем набрать вес для здоровья.';
+    }
+    if (bmi < 18.5) {
+      return 'Недостаточная масса тела. Рекомендуется увеличить массу тела.';
+    }
+    if (bmi < 25) {
+      return 'Норма. Ваш вес в здоровом диапазоне — поддерживайте его!';
+    }
+    if (bmi < 30) {
+      return 'Избыточная масса тела или предожирение. Желательно снизить вес для улучшения самочувствия.';
+    }
+    if (bmi < 35) {
+      return 'Ожирение. Рекомендуется уменьшить вес под контролем специалиста.';
+    }
+    if (bmi < 40) {
+      return 'Ожирение резкое. Необходимо снижение веса с медицинской поддержкой.';
+    }
+    return 'Очень резкое ожирение. Требуется срочная коррекция веса под наблюдением врача.';
   }
 }
 

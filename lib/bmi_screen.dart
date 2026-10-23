@@ -28,7 +28,7 @@ class _BmiScreenState extends State<BmiScreen> {
     FocusScope.of(context).unfocus();
     if (_height.text.trim().isEmpty || _weight.text.trim().isEmpty) {
       setState(() {
-        _error = 'Заполните все поля!';
+        _error = 'Заполните все поля';
         _result = null;
       });
       return;
@@ -86,12 +86,14 @@ class _BmiScreenState extends State<BmiScreen> {
     ),
     body: ScreenBody(
       child: Column(
+        key: const ValueKey('calculator-content'),
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const PageHeading('Индекс массы тела'),
           const SizedBox(height: 22),
           AppCard(
+            key: const ValueKey('bmi-input-card'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -128,35 +130,50 @@ class _BmiScreenState extends State<BmiScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          FilledButton(onPressed: _calculate, child: const Text('РАССЧИТАТЬ')),
-          if (_result == null) ErrorMessage(_error),
+          FilledButton(
+            key: const ValueKey('calculate-button'),
+            onPressed: _calculate,
+            child: const Text('РАССЧИТАТЬ'),
+          ),
+          if (_error != null) ErrorMessage(_error),
           if (_result != null) ...[
             const SizedBox(height: 20),
             AppCard(
+              key: const ValueKey('bmi-result-card'),
+              color: resultBackground,
+              padding: const EdgeInsets.all(20),
               child: Semantics(
                 liveRegion: true,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Ваш ИМТ: ${_result!.bmi.toStringAsFixed(1)}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
+                    const Text(
+                      'Ваш индекс массы тела:',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
                         color: appGreen,
-                        fontSize: 22,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Text(
-                      _result!.category,
+                      _result!.formattedBmi,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(
+                        color: appGreen,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Оценка для взрослых от 20 лет. ИМТ не является диагнозом.',
+                    const SizedBox(height: 18),
+                    Text(
+                      _result!.recommendation,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: appGray, fontSize: 12),
+                      style: const TextStyle(
+                        color: recommendationColor,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),

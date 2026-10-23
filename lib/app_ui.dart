@@ -4,6 +4,8 @@ const appGreen = Color(0xFF4CAF50);
 const appBackground = Color(0xFFF5F5F5);
 const appGray = Color(0xFF808080);
 const appRed = Color(0xFFFF5252);
+const resultBackground = Color(0xFFE8F5E9);
+const recommendationColor = Color(0xFF757575);
 const cardShadows = [
   BoxShadow(
     color: Color(0x26A18B8B),
@@ -99,15 +101,17 @@ class AppCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(24),
+    this.color = Colors.white,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final Color color;
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: padding,
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: color,
       borderRadius: BorderRadius.circular(12),
       boxShadow: cardShadows,
     ),
@@ -198,15 +202,26 @@ class AppBottomBar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: const BoxDecoration(
       color: Colors.white,
-      boxShadow: cardShadows,
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x26A18B8B),
+          blurRadius: 12,
+          offset: Offset(0, -3),
+        ),
+      ],
     ),
     child: SafeArea(
       top: false,
-      child: Row(
-        children: [
-          _tab('Калькулятор', !profileSelected, onCalculator),
-          _tab('Профиль', profileSelected, onProfile),
-        ],
+      child: SizedBox(
+        key: const ValueKey('footer-content'),
+        height: 60,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _tab('Калькулятор', !profileSelected, onCalculator),
+            _tab('Профиль', profileSelected, onProfile),
+          ],
+        ),
       ),
     ),
   );
@@ -217,14 +232,17 @@ class AppBottomBar extends StatelessWidget {
         onPressed: onPressed,
         style: TextButton.styleFrom(
           foregroundColor: selected ? const Color(0xFF252525) : appGray,
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           shape: const RoundedRectangleBorder(),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.normal,
           ),
         ),
-        child: Text(label, textAlign: TextAlign.center),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, textAlign: TextAlign.center, maxLines: 1),
+        ),
       ),
     ),
   );

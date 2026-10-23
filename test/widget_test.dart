@@ -6,6 +6,7 @@ import 'package:flutter_application_1/auth_screen.dart';
 import 'package:flutter_application_1/bmi_screen.dart';
 import 'package:flutter_application_1/profile_screen.dart';
 import 'package:flutter_application_1/registration_screen.dart';
+import 'package:flutter_application_1/app_ui.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
@@ -35,9 +36,7 @@ void main() {
         demoPassword,
       );
       expect(
-        tester
-            .widget<TextField>(find.byType(TextField).last)
-            .obscureText,
+        tester.widget<TextField>(find.byType(TextField).last).obscureText,
         isTrue,
       );
       expect(find.text('Неверный email или пароль'), findsNothing);
@@ -97,12 +96,13 @@ void main() {
     (tester) async {
       await tester.pumpWidget(const MyApp());
       await tapText(tester, 'ВОЙТИ');
+      expect(find.text('Ваш индекс массы тела:'), findsNothing);
       await tapText(tester, 'Профиль');
       expect(find.textContaining('Расчётов пока нет'), findsOneWidget);
       await tapText(tester, 'Калькулятор');
       await tester.enterText(find.byType(TextFormField).first, '');
       await tapText(tester, 'РАССЧИТАТЬ');
-      expect(find.text('Заполните все поля!'), findsOneWidget);
+      expect(find.text('Заполните все поля'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField).first, '0');
       await tapText(tester, 'РАССЧИТАТЬ');
       expect(
@@ -112,17 +112,22 @@ void main() {
       await tester.enterText(find.byType(TextFormField).first, '185');
       await tester.enterText(find.byType(TextFormField).last, '77,0');
       await tapText(tester, 'РАССЧИТАТЬ');
-      expect(find.text('Ваш ИМТ: 22.5'), findsOneWidget);
+      expect(find.text('Ваш индекс массы тела:'), findsOneWidget);
       await tapText(tester, 'Профиль');
       expect(find.byType(ProfileScreen), findsOneWidget);
       expect(find.text('22.5'), findsOneWidget);
+      expect(find.text('Рекомендация'), findsOneWidget);
+      expect(
+        find.text('Норма. Ваш вес в здоровом диапазоне — поддерживайте его!'),
+        findsOneWidget,
+      );
       expect(find.text('185 см'), findsOneWidget);
       expect(find.textContaining('Сегодня,'), findsOneWidget);
       await tapText(tester, 'Калькулятор');
-      expect(find.text('Ваш ИМТ: 22.5'), findsOneWidget);
+      expect(find.text('Ваш индекс массы тела:'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField).last, '80');
       await tester.pump();
-      expect(find.text('Ваш ИМТ: 22.5'), findsNothing);
+      expect(find.text('Ваш индекс массы тела:'), findsNothing);
     },
   );
 
@@ -156,13 +161,96 @@ void main() {
       closeTo(22.498, 0.001),
     );
     expect(record(18.49).category, 'Недостаточная масса тела');
-    expect(record(18.5).category, 'Нормальная масса тела');
-    expect(record(24.99).category, 'Нормальная масса тела');
-    expect(record(25).category, 'Избыточная масса тела');
+    expect(record(18.5).category, 'Норма');
+    expect(record(24.99).category, 'Норма');
+    expect(record(25).category, 'Избыточная масса тела или предожирение');
     expect(record(30).category, 'Ожирение');
+    for (final entry in <double, String>{
+      15.99: 'Выраженный дефицит массы тела',
+      16: 'Выраженный дефицит массы тела',
+      16.01: 'Недостаточная масса тела',
+      24.999: 'Норма',
+      29.999: 'Избыточная масса тела или предожирение',
+      34.999: 'Ожирение',
+      35: 'Ожирение резкое',
+      39.999: 'Ожирение резкое',
+      40: 'Очень резкое ожирение',
+      45: 'Очень резкое ожирение',
+    }.entries) {
+      expect(record(entry.key).category, entry.value);
+      expect(record(entry.key).recommendation, startsWith('${entry.value}.'));
+    }
+    expect(record(22.5).formattedBmi, '22.5');
+    expect(record(25.25).formattedBmi, '25.25');
     expect(parsePositiveNumber('77,5'), 77.5);
     for (final invalid in ['', '0', '-1', 'NaN', 'Infinity', 'abc']) {
       expect(parsePositiveNumber(invalid), isNull);
     }
   });
+
+  testWidgets(
+    'Calculator stays centered, result matches design and both footers are 60 high',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MyApp());
+      final authTitleStyle = tester
+          .widget<Text>(find.text('Вход в приложение'))
+          .style;
+      await tapText(tester, 'ВОЙТИ');
+      expect(
+        tester.widget<Text>(find.text('Индекс массы тела')).style,
+        authTitleStyle,
+      );
+
+      void checkGeometry() {
+        final footer = tester.getRect(
+          find.byKey(const ValueKey('footer-content')),
+        );
+        final content = tester.getRect(
+          find.byKey(const ValueKey('calculator-content')),
+        );
+        expect(footer.height, 60);
+        expect(content.center.dx, closeTo(195, 0.1));
+        expect(content.center.dy, closeTo(footer.top / 2, 0.1));
+        final input = tester.getRect(
+          find.byKey(const ValueKey('bmi-input-card')),
+        );
+        final button = tester.getRect(
+          find.byKey(const ValueKey('calculate-button')),
+        );
+        expect(button.left, input.left);
+        expect(button.width, input.width);
+      }
+
+      checkGeometry();
+      expect(find.byKey(const ValueKey('bmi-result-card')), findsNothing);
+      await tapText(tester, 'РАССЧИТАТЬ');
+      checkGeometry();
+      final result = tester.widget<AppCard>(
+        find.byKey(const ValueKey('bmi-result-card')),
+      );
+      expect(result.color, const Color(0xFFE8F5E9));
+      expect(
+        tester.widget<Text>(find.text('Ваш индекс массы тела:')).textAlign,
+        TextAlign.left,
+      );
+      expect(
+        tester.widget<Text>(find.text('22.5')).textAlign,
+        TextAlign.center,
+      );
+      expect(
+        tester.getSize(find.byKey(const ValueKey('bmi-result-card'))).width,
+        tester.getSize(find.byKey(const ValueKey('bmi-input-card'))).width,
+      );
+      await tapText(tester, 'Профиль');
+      expect(
+        tester.getSize(find.byKey(const ValueKey('footer-content'))).height,
+        60,
+      );
+      await tapText(tester, 'Калькулятор');
+      expect(find.text('22.5'), findsOneWidget);
+    },
+  );
 }
