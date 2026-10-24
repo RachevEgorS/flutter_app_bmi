@@ -2,10 +2,61 @@ import 'package:flutter/material.dart';
 
 import 'app_session.dart';
 import 'app_ui.dart';
+import 'calculation_error_message.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key, required this.user});
-  final UserProfile user;
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key, required this.session});
+  final AppSession session;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  static const _pageSize = 50;
+  final List<BmiRecord> _history = [];
+  bool _isLoading = false;
+  bool _hasLoaded = false;
+  bool _hasMore = false;
+  int _nextOffset = 0;
+  String? _error;
+  UserProfile get user => widget.session.user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory({bool more = false}) async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final records = await widget.session.loadHistory(
+        offset: more ? _nextOffset : 0,
+        limit: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        if (!more) _history.clear();
+        // Avoid duplicate cards when newer records shift pages during a visit.
+        final ids = _history.map((record) => record.id).toSet();
+        _history.addAll(records.where((record) => ids.add(record.id)));
+        _hasMore = records.length == _pageSize;
+        _nextOffset = (more ? _nextOffset : 0) + records.length;
+        _hasLoaded = true;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = calculationErrorMessage(error, saving: false));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -72,17 +123,35 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            if (user.history.isEmpty)
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (_error != null) ErrorMessage(_error),
+            if (!_isLoading)
+              TextButton(
+                onPressed: () => _loadHistory(),
+                child: Text(
+                  _error == null ? 'Обновить историю' : 'Повторить загрузку',
+                ),
+              ),
+            if (_hasLoaded && !_isLoading && _error == null && _history.isEmpty)
               const AppCard(
                 child: Text(
                   'Расчётов пока нет. Перейдите в калькулятор и рассчитайте свой ИМТ.',
                   style: TextStyle(color: appGray, fontSize: 16),
                 ),
               ),
-            for (final record in user.history) ...[
+            for (final record in _history) ...[
               _HistoryCard(record: record),
               const SizedBox(height: 18),
             ],
+            if (_hasMore && !_isLoading)
+              TextButton(
+                onPressed: () => _loadHistory(more: true),
+                child: const Text('Показать ещё'),
+              ),
           ],
         ),
       ),

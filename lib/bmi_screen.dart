@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_session.dart';
 import 'app_ui.dart';
+import 'calculation_error_message.dart';
 import 'profile_screen.dart';
 
 class BmiScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _BmiScreenState extends State<BmiScreen> {
   final _weight = TextEditingController(text: '77');
   String? _error;
   BmiRecord? _result;
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -24,7 +26,8 @@ class _BmiScreenState extends State<BmiScreen> {
     super.dispose();
   }
 
-  void _calculate() {
+  Future<void> _calculate() async {
+    if (_isSaving) return;
     FocusScope.of(context).unfocus();
     if (_height.text.trim().isEmpty || _weight.text.trim().isEmpty) {
       setState(() {
@@ -42,6 +45,13 @@ class _BmiScreenState extends State<BmiScreen> {
       });
       return;
     }
+    if (!isDatabaseMeasurement(height) || !isDatabaseMeasurement(weight)) {
+      setState(() {
+        _error = 'Введите рост и вес целыми числами без дробной части и слишком больших значений';
+        _result = null;
+      });
+      return;
+    }
     final record = BmiRecord(
       height: height,
       weight: weight,
@@ -54,11 +64,22 @@ class _BmiScreenState extends State<BmiScreen> {
       });
       return;
     }
-    widget.session.user.history.insert(0, record);
     setState(() {
       _error = null;
-      _result = record;
+      _result = null;
+      _isSaving = true;
     });
+    try {
+      final savedRecord = await widget.session.saveCalculation(record);
+      if (!mounted) return;
+      setState(() => _result = savedRecord);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = calculationErrorMessage(error, saving: true));
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   void _onChanged(String _) {
@@ -76,10 +97,11 @@ class _BmiScreenState extends State<BmiScreen> {
       profileSelected: false,
       onCalculator: () {},
       onProfile: () {
+        if (_isSaving) return;
         FocusScope.of(context).unfocus();
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => ProfileScreen(user: widget.session.user),
+            builder: (_) => ProfileScreen(session: widget.session),
           ),
         );
       },
@@ -94,46 +116,49 @@ class _BmiScreenState extends State<BmiScreen> {
           const SizedBox(height: 22),
           AppCard(
             key: const ValueKey('bmi-input-card'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Персональные данные',
-                  style: TextStyle(
-                    color: appGreen,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            child: AbsorbPointer(
+              absorbing: _isSaving,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Персональные данные',
+                    style: TextStyle(
+                      color: appGreen,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                AppField(
-                  label: 'Рост (см)',
-                  hint: 'Введите рост',
-                  controller: _height,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  const SizedBox(height: 12),
+                  AppField(
+                    label: 'Рост (см)',
+                    hint: 'Введите рост',
+                    controller: _height,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: _onChanged,
                   ),
-                  onChanged: _onChanged,
-                ),
-                const SizedBox(height: 18),
-                AppField(
-                  label: 'Вес (кг)',
-                  hint: 'Введите вес',
-                  controller: _weight,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                  const SizedBox(height: 18),
+                  AppField(
+                    label: 'Вес (кг)',
+                    hint: 'Введите вес',
+                    controller: _weight,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: _onChanged,
+                    onSubmitted: _calculate,
                   ),
-                  onChanged: _onChanged,
-                  onSubmitted: _calculate,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
           FilledButton(
             key: const ValueKey('calculate-button'),
-            onPressed: _calculate,
-            child: const Text('РАССЧИТАТЬ'),
+            onPressed: _isSaving ? null : _calculate,
+            child: Text(_isSaving ? 'СОХРАНЯЕМ…' : 'РАССЧИТАТЬ'),
           ),
           if (_error != null) ErrorMessage(_error),
           if (_result != null) ...[

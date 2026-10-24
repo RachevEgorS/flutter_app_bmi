@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/app_session.dart';
 import 'package:flutter_application_1/auth_screen.dart';
 import 'package:flutter_application_1/bmi_screen.dart';
 import 'package:flutter_application_1/profile_screen.dart';
 import 'package:flutter_application_1/registration_screen.dart';
 import 'package:flutter_application_1/app_ui.dart';
+
+import 'auth_test_support.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   final finder = find.text(text);
@@ -19,7 +20,7 @@ void main() {
   testWidgets(
     'Login rejects wrong credentials and accepts the specified account',
     (tester) async {
-      await tester.pumpWidget(const MyApp());
+      await pumpTestApp(tester);
       expect(find.byType(AuthScreen), findsOneWidget);
       expect(
         tester
@@ -51,9 +52,9 @@ void main() {
   );
 
   testWidgets(
-    'Registration validates, rejects duplicate email, and creates a session account',
+    'Registration validates, rejects duplicate email, and creates a Supabase account',
     (tester) async {
-      await tester.pumpWidget(const MyApp());
+      await pumpTestApp(tester);
       await tapText(tester, 'Зарегистрироваться');
       expect(find.byType(RegistrationScreen), findsOneWidget);
       await tapText(tester, 'СОЗДАТЬ АККАУНТ');
@@ -85,7 +86,7 @@ void main() {
   );
 
   testWidgets('Registration back link returns to login', (tester) async {
-    await tester.pumpWidget(const MyApp());
+    await pumpTestApp(tester);
     await tapText(tester, 'Зарегистрироваться');
     await tapText(tester, 'Вернуться к странице входа');
     expect(find.byType(AuthScreen), findsOneWidget);
@@ -94,7 +95,7 @@ void main() {
   testWidgets(
     'Calculator validates inputs and profile preserves real history',
     (tester) async {
-      await tester.pumpWidget(const MyApp());
+      await pumpTestApp(tester);
       await tapText(tester, 'ВОЙТИ');
       expect(find.text('Ваш индекс массы тела:'), findsNothing);
       await tapText(tester, 'Профиль');
@@ -140,7 +141,7 @@ void main() {
       tester.platformDispatcher.textScaleFactorTestValue = 1.5;
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await tester.pumpWidget(const MyApp());
+      await pumpTestApp(tester);
       await tapText(tester, 'Зарегистрироваться');
       await tapText(tester, 'СОЗДАТЬ АККАУНТ');
       expect(tester.takeException(), isNull);
@@ -194,7 +195,7 @@ void main() {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(const MyApp());
+      await pumpTestApp(tester);
       final authTitleStyle = tester
           .widget<Text>(find.text('Вход в приложение'))
           .style;
